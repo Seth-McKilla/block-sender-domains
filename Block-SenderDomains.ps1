@@ -14,15 +14,37 @@
     Author : Sustainable Science, LLC
     Requires: ExchangeOnlineManagement module, Entra app registration
               with Exchange.ManageAsApp permission and Security Admin role.
+
+    Required environment variables (set once; the script exits with an
+    ERROR if any are missing or empty):
+
+        BLOCKSENDER_TENANT_ID       - Directory (tenant) ID from Entra
+        BLOCKSENDER_APP_ID          - Application (client) ID from Entra
+        BLOCKSENDER_CERT_THUMBPRINT - Thumbprint of the cert in Cert:\CurrentUser\My
+        BLOCKSENDER_ORGANIZATION    - Your tenant's .onmicrosoft.com domain
+
+    Set them permanently with setx (run once in an elevated Command Prompt):
+
+        setx BLOCKSENDER_TENANT_ID       "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        setx BLOCKSENDER_APP_ID          "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        setx BLOCKSENDER_CERT_THUMBPRINT "ABCDEF1234567890ABCDEF1234567890ABCDEF12"
+        setx BLOCKSENDER_ORGANIZATION    "yourcompany.onmicrosoft.com"
+
+    Or for the current PowerShell session only:
+
+        $env:BLOCKSENDER_TENANT_ID       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        $env:BLOCKSENDER_APP_ID          = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        $env:BLOCKSENDER_CERT_THUMBPRINT = "ABCDEF1234567890ABCDEF1234567890ABCDEF12"
+        $env:BLOCKSENDER_ORGANIZATION    = "yourcompany.onmicrosoft.com"
 #>
 
 # ====== CONFIGURATION ======
 $WatchFolder    = "$env:USERPROFILE\Desktop\BlockSender"
 $LogFile        = "$env:USERPROFILE\Desktop\BlockSender\_blocklist.log"
-$TenantId       = "YOUR-TENANT-ID-HERE"
-$AppId          = "YOUR-APP-ID-HERE"
-$CertThumbprint = "YOUR-CERT-THUMBPRINT-HERE"
-$Organization   = "sustainablescience.onmicrosoft.com"  # your .onmicrosoft.com domain
+$TenantId       = $env:BLOCKSENDER_TENANT_ID
+$AppId          = $env:BLOCKSENDER_APP_ID
+$CertThumbprint = $env:BLOCKSENDER_CERT_THUMBPRINT
+$Organization   = $env:BLOCKSENDER_ORGANIZATION
 
 # Free email / common domains we never want to block wholesale.
 # If a sender from one of these domains is dropped, the script logs
@@ -106,6 +128,18 @@ function Get-EmailDomain {
 
 # ====== MAIN ======
 Write-Log "=== Run started ==="
+
+# Validate required environment variables before attempting any operations
+$_missingVars = @()
+if (-not $TenantId)       { $_missingVars += 'BLOCKSENDER_TENANT_ID' }
+if (-not $AppId)          { $_missingVars += 'BLOCKSENDER_APP_ID' }
+if (-not $CertThumbprint) { $_missingVars += 'BLOCKSENDER_CERT_THUMBPRINT' }
+if (-not $Organization)   { $_missingVars += 'BLOCKSENDER_ORGANIZATION' }
+
+if ($_missingVars.Count -gt 0) {
+    Write-Log "Missing required environment variable(s): $($_missingVars -join ', '). Set them and re-run." "ERROR"
+    exit 1
+}
 
 $files = Get-ChildItem -Path $WatchFolder -File | Where-Object { $_.Extension -in '.msg','.eml' }
 

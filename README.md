@@ -78,22 +78,38 @@ Go to https://entra.microsoft.com and sign in as a Global Admin.
    - Click **No member selected**, search for `SSLLC Block List Automation`,
      select it, click **Select**, then **Next** and **Assign**
 
-### Step 4 - Configure the script
+### Step 4 - Set required environment variables
+
+The script reads its four configuration values from environment variables.
+Set them once with `setx` in an elevated Command Prompt (they persist across
+reboots and sessions). Replace the placeholder values with your actual IDs and
+thumbprint from Steps 2–3:
+
+    setx BLOCKSENDER_TENANT_ID       "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    setx BLOCKSENDER_APP_ID          "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    setx BLOCKSENDER_CERT_THUMBPRINT "ABCDEF1234567890ABCDEF1234567890ABCDEF12"
+    setx BLOCKSENDER_ORGANIZATION    "yourcompany.onmicrosoft.com"
+
+- `BLOCKSENDER_TENANT_ID` – Directory (tenant) ID from Entra
+- `BLOCKSENDER_APP_ID` – Application (client) ID from Entra
+- `BLOCKSENDER_CERT_THUMBPRINT` – Thumbprint from Step 2
+- `BLOCKSENDER_ORGANIZATION` – Your `.onmicrosoft.com` domain
+
+After running `setx`, open a **new** PowerShell window so the variables are
+visible. To verify:
+
+    $env:BLOCKSENDER_TENANT_ID
+    $env:BLOCKSENDER_APP_ID
+    $env:BLOCKSENDER_CERT_THUMBPRINT
+    $env:BLOCKSENDER_ORGANIZATION
+
+If unsure what your `.onmicrosoft.com` domain is: in the M365 admin center,
+go to **Settings > Domains** - it is the `*.onmicrosoft.com` entry.
+
+### Step 5 - Save and test the script
 
 1.  Create folder `C:\Scripts` if it doesn't exist
 2.  Save `Block-SenderDomains.ps1` to `C:\Scripts\`
-3.  Open it in a text editor and fill in the four config values at the top:
-
-        $TenantId       = "..."   # Directory (tenant) ID from Entra
-        $AppId          = "..."   # Application (client) ID from Entra
-        $CertThumbprint = "..."   # Thumbprint from Step 2
-        $Organization   = "sustainablescience.onmicrosoft.com"
-
-    Confirm `$Organization` matches your tenant's `.onmicrosoft.com` domain.
-    If unsure: in M365 admin center, **Settings > Domains** - it's the
-    `*.onmicrosoft.com` entry.
-
-### Step 5 - Test the script manually
 
 Drop a junk email into `Desktop\BlockSender` (drag from New Outlook into
 the folder; it should save as `.eml`). Then run:
@@ -210,16 +226,16 @@ installed. If you're on a New-Outlook-only machine, drag as `.eml` instead
 (the script handles both).
 
 **Scheduled task shows "Last Run Result: 0x1" or similar**
-Check the log file. Most often it's a missing config value at the top of
-the script, or the cert isn't where the script expects it. The cert lives
-in `Cert:\CurrentUser\My` - so the scheduled task must run as the same
+Check the log file. Most often it's a missing or empty environment variable
+(the log will name which one), or the cert isn't where the script expects it.
+The cert lives in `Cert:\CurrentUser\My` - so the scheduled task must run as the same
 user who created the cert.
 
 **Cert expires**
 The cert is valid for 10 years from creation. When it does expire, repeat
 Step 2 to make a new one, upload the new `.cer` to the app registration
-in Entra (Certificates & secrets), and update `$CertThumbprint` in the
-script.
+in Entra (Certificates & secrets), and update the `BLOCKSENDER_CERT_THUMBPRINT`
+environment variable to the new thumbprint (`setx BLOCKSENDER_CERT_THUMBPRINT "NEW-THUMBPRINT"`).
 
 ## Notes on the protected domain list
 
